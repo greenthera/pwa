@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="manifest" href="manifest.json" />
+  </head>
+  <body>
+    <h1>PWA</h1>
+    <script>
+      const THIRTY_SECONDS = 30 * 1000;
+      
+      async function initBackgroundSync() {
+        const status = await navigator.permissions.query({
+          name: "periodic-background-sync",
+        });
+
+        if (status?.state === "granted") {
+          console.log("Periodic background sync granted.");
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.periodicSync.register("get-notifications", {
+              minInterval: THIRTY_SECONDS,
+            });
+            console.log("Periodic background sync registered.");
+          } catch (err) {
+            console.error("Periodic background sync not registered.", err);
+          }
+        } else {
+          console.error("Periodic background sync not granted.");
+        }
+      }
+
+      async function initNotification() {
+        if (!window.Notification) {
+          console.error("Notification not available.");
+        } else if (Notification.permission === "default") {
+          await Notification.requestPermission();
+        }
+
+        if (Notification.permission === "granted") {
+          try {
+            console.log("Notification permission granted.");
+            initBackgroundSync();
+          } catch (err) {
+            console.error("Error in background sync.");
+          }
+        } else {
+          console.error("Notification permission not granted.");
+        }
+      }
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .then((reg) => {
+              console.log("Service worker registered successfully");
+              initNotification();
+              reg.update();
+            })
+            .catch((err) => {
+              console.error("Failed to register service worker", err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
